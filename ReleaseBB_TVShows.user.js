@@ -3,6 +3,7 @@
 // @description Follow TV Shows on rlsbb.ru and swiftly find new episodes
 // @namespace   drdre
 // @license     MIT
+// @icon        http://rlsbb.ru/cropped_bb_icon.ico
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/(\?.+)?$/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/page\/\d+\/?.*/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/category\/tv-shows\/(page\/\d+\/?)?$/
@@ -23,7 +24,7 @@
 // @exclude     http://www.rlsbb.com/maintenance.htm
 // @exclude     http://rlsbb.ru/maintenance.html
 // @exclude     http:/rlsbb.com/maintenance.htm
-// @version     15
+// @version     16
 
 // @grant       GM_setValue
 // @grant       GM_getValue
@@ -74,14 +75,32 @@ function parseMonthname(name) {
 }
 
 function humanBytes(bytes, precision) {
- bytes = parseInt(bytes,10);
- if(bytes === 0) return '0 Byte';
- var k = 1024;
- var sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
- var i = Math.floor(Math.log(bytes) / Math.log(k));
- return parseFloat((bytes / Math.pow(k, i)).toPrecision(2)) + ' ' + sizes[i];
+  bytes = parseInt(bytes,10);
+  if(bytes === 0) return '0 Byte';
+  var k = 1024;
+  var sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  var i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toPrecision(2)) + ' ' + sizes[i];
 }
 
+function minutesSince (time) {
+  const seconds = ((new Date()).getTime() - time.getTime()) / 1000
+  const min = Math.round(seconds / 60)
+  if (min < 50) {
+     return seconds > 60 ? min + ' min ago' : 'now'
+  }
+  const h = Math.round(min / 60)
+  if (h < 49) {
+    return h + ' hour' + (h == 1?'':'s') + ' ago'
+  }
+  const d = parseInt(h / 24)
+  if (d < 365) {
+    return d + ' day' + (d == 1?'':'s') + ' ago'
+  }
+  const years = parseInt(d / 365)
+  const daysLeft = d - (years * 365)
+  return years + 'y+' + daysLeft + 'day' + (daysLeft === 1?'':'s') + ' ago'
+}
 
 function base64BinaryString(s) {
   const base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
@@ -164,7 +183,7 @@ var lastlibload = -1;
 
 var mapID2Index = {}; // temporary cache for finding an entry by its ID i.e. unique URL
 
-function addCSS()  {
+function addCSS() {
   document.head.appendChild(document.createElement('style')).innerHTML = `
 #rlsbbmymainwin {
   position:fixed; top:0px; left:0px; z-index:999
@@ -237,7 +256,7 @@ async function save() {
   libversion++;
 
   if(libversion == Number.MAX_SAFE_INTEGER) {
-    libersion = Number.MIN_SAFE_INTEGER;
+    libversion = Number.MIN_SAFE_INTEGER;
   }
   await GM.setValue("libversion",libversion);
   records = sortRecordsInPlace(records);
@@ -252,7 +271,7 @@ async function saveOnlyRecords() {
   libversion++;
 
   if(libversion == Number.MAX_SAFE_INTEGER) {
-    libersion = Number.MIN_SAFE_INTEGER;
+    libversion = Number.MIN_SAFE_INTEGER;
   }
   await GM.setValue("libversion",libversion);
   records = sortRecordsInPlace(records);
@@ -266,7 +285,7 @@ async function saveOnlyIgnored() {
   libversion++;
 
   if(libversion == Number.MAX_SAFE_INTEGER) {
-    libersion = Number.MIN_SAFE_INTEGER;
+    libversion = Number.MIN_SAFE_INTEGER;
   }
   await GM.setValue("libversion",libversion);
   await GM.setValue("ignoreShows",JSON.stringify(Array.from(ignoreShows)));
@@ -315,7 +334,7 @@ async function setDownloaded(id) {
 
 async function isIgnoredShow(id) {
   var record = await Episode(id);
-  if(record.show && ignoreShows.has(record.show))  {
+  if(record.show && ignoreShows.has(record.show)) {
     return true;
   }
   return false;
@@ -414,8 +433,18 @@ function readPost(post) {
   var id = link.href;
   var upperCaseContent = entryContent.innerHTML.toUpperCase();
   var isnuke = false;
-  if(getRecordById(id) !== false) {
+  let record = getRecordById(id)
+  if(record !== false) {
     if(0 == Array.prototype.filter.call(nukes, function(a) { return -1!=upperCaseContent.indexOf(a)}).length) {
+      post.querySelectorAll('.postDay').forEach(function (e) {
+         const span = e.appendChild(document.createElement('span'))
+         span.setAttribute("title", "You already saw this post")
+         span.appendChild(document.createTextNode('✅'))
+         if ("firstSeen" in record) {
+           const since = minutesSince(new Date(record.firstSeen))
+           span.setAttribute("title", "You already saw this post " + since)
+         }
+      })
       throw "error_recordexists";
       return;
     } else {
@@ -431,6 +460,7 @@ function readPost(post) {
     "id": id,
     "title": title,
     "time": (new Date(int(time[3]), parseMonthname(time[1]),int(time[2]), int(time[4])+(time[6] == 'pm'?12:0), int(time[5]), 0, 0)).getTime(),
+    "firstSeen" : new Date().getTime(),
     "release" : []
   };
 
@@ -445,13 +475,13 @@ function readPost(post) {
 
   // Find actual releasenames of movie
   var strong = entryContent.getElementsByTagName("strong");
-  for(var i = 0; i < strong.length; i++) {
+  for(let i = 0; i < strong.length; i++) {
     if(strong[i].innerHTML.match(/Release Name:/)) {
       result["release"].push(trim(strong[i].nextSibling.textContent));
     } else if(strong[i].innerHTML.match(/Links:/)) {
       var a = strong[i].parentNode.getElementsByTagName("a");
       var m;
-      for(var j = 0; j < a.length; j++) {
+      for(let j = 0; j < a.length; j++) {
         if(m = a[j].href.match(/imdb\.com\/title\/(\w+)/)) {
           result["imdb"] = m[1];
           break;
@@ -462,9 +492,9 @@ function readPost(post) {
   }
 
   // Find actual releasenames of tvshow
-  var strong = entryContent.getElementsByTagName("strong");
-  for(var i = 0; i < strong.length; i++) {
-    var m;
+  strong = entryContent.getElementsByTagName("strong");
+  for(let i = 0; i < strong.length; i++) {
+    let m;
     if((m = strong[i].innerHTML.match(/\.(\d+)\xD70*(\d+)\./)) || (m = strong[i].innerHTML.match(/\.S0*(\d+)E0*(\d+)\./) )) {
       result["release"].push(trim(strong[i].innerHTML));
     }
@@ -477,11 +507,11 @@ function readPost(post) {
       img = entryContent.getElementsByTagName("p")[0].getElementsByTagName("img")[0];
     }
   }
-  if("show" in result && img)  {
+  if("show" in result && img) {
     result["image"] = img.src;
   }
 
-  if("show" in result || "imdb" in result) {  // Only save tvshows or movies
+  if("show" in result || "imdb" in result) { // Only save tvshows or movies
     if(isnuke) {
       records[mapID2Index[id]] = result; // Overwrite record
     } else {
@@ -569,8 +599,9 @@ function showButton(title,click) {
     this.style.backgroundImage = "linear-gradient(0.50turn, #ccc, #fff, #ccc)";
   });
   b.addEventListener("mouseout",function() {
-   if(this.dataset.oldbgImage)
+   if (this.dataset.oldbgImage) {
      this.style.backgroundImage = this.dataset.oldbgImage;
+   }
   });
   b.innerHTML = title;
   c.insertBefore(b,br);
@@ -581,10 +612,10 @@ async function showIgnoreMenu() {
   var c = getMainWindow().menu;
   c.innerHTML = "";
   if(c.dataset.menu == "ignore") {
-    c.dataset.menu  = "";
+    c.dataset.menu = "";
     return;
   } else {
-    c.dataset.menu  = "ignore";
+    c.dataset.menu = "ignore";
   }
 
   var allshows = await getLatestEpisodes();
@@ -646,7 +677,7 @@ async function showIgnoreMenu() {
 
     const promises = []
 
-    for(var i = 0; i <  allshows.length; i++) {
+    for(let i = 0; i < allshows.length; i++) {
       promises.push(ignoreShow(allshows[i].id));
     }
     await Promise.all(promises)
@@ -654,12 +685,12 @@ async function showIgnoreMenu() {
   };
 
   var showAll = async function(ev) {
-    for(var i = 0; i < lis.length; i++) {
+    for(let i = 0; i < lis.length; i++) {
       ul.removeChild(lis[i]);
     }
     lis = [];
 
-    for(var i = 0; i <  allshows.length; i++) {
+    for(let i = 0; i < allshows.length; i++) {
       li = document.createElement("li");
       li.setAttribute("data-id",allshows[i].id);
       li.appendChild(document.createTextNode(allshows[i].showWithCase+" S"+ pad2(allshows[i].season)+"E"+pad2(allshows[i].episode)));
@@ -688,7 +719,7 @@ async function showIgnoreMenu() {
 
 
 
-  for(var i = 0; i <  allshows.length; i++) {
+  for(let i = 0; i < allshows.length; i++) {
     if(await isIgnoredShow(allshows[i].id)) {
       continue;
     }
@@ -716,10 +747,10 @@ async function showCleanMenu(forceshow) {
   var c = getMainWindow().menu;
   c.innerHTML = "";
   if(c.dataset.menu == "clean" && forceshow !== true) {
-    c.dataset.menu  = "";
+    c.dataset.menu = "";
     return;
   } else {
-    c.dataset.menu  = "clean";
+    c.dataset.menu = "clean";
   }
 
   await loadImageCache();
@@ -777,7 +808,7 @@ async function showCleanMenu(forceshow) {
     var episodes = await getLatestEpisodes();
     episodes = removeIgnoredShowsFrom(episodes);
     var newImageCache = {}
-    for(var i = 0; i <  episodes.length; i++) {
+    for(let i = 0; i < episodes.length; i++) {
       if(episodes[i].image) {
         var url = episodes[i].image;
         if(imageCache[url]) {
@@ -961,6 +992,15 @@ async function showTVShows() {
   var div = document.createElement("div");
   div.setAttribute("class","rlsbbmy_showlister");
   div.style.maxHeight = (window.innerHeight - 150) + "px"
+  try {
+    var style = window.getComputedStyle(document.body)
+    div.style.backgroundImage = style.backgroundImage
+    div.style.backgroundRepeat = style.backgroundRepeat
+    div.style.backgroundPositionY = '-50px'
+  } catch(e) {
+    div.style.background = '#bbb'
+  }
+
   const openEpisode = function() {
     const el = this
     if(el.dataset.episodeid) {
@@ -1018,7 +1058,7 @@ async function showTVShows() {
     episodes = removeIgnoredShowsFrom(episodes);
     episodes = sortRecordsInPlace(episodes);
 
-    for(var i = 0; i <  episodes.length; i++) {
+    for(let i = 0; i < episodes.length; i++) {
       var entry = document.createElement("div");
       entry.dataset.episodeid = episodes[i].id;
       if(episodes[i].showWithCase.length < 40) {
@@ -1053,7 +1093,16 @@ async function showTVShows() {
         var div_ign = document.createElement("div");
         div_ign.setAttribute("class","rlsbbmy_showentry_ignorebutton");
         div_ign.appendChild(document.createTextNode("\u2717")); //&cross;
-        div_ign.addEventListener("click",async function(ev) { ev.stopPropagation(); if(confirmOnce("Ignore?")) {if(await ignoreShow(this.parentNode.dataset.episodeid)) { this.parentNode.parentNode.removeChild(this.parentNode); } else { alert("An error occured!"); } }  });
+        div_ign.addEventListener("click",async function(ev) {
+            ev.stopPropagation();
+            if(confirmOnce("Ignore?")) {
+                if(await ignoreShow(this.parentNode.dataset.episodeid)) {
+                    this.parentNode.parentNode.removeChild(this.parentNode);
+                } else {
+                    alert("An error occured!");
+                }
+            }
+        });
         entry.insertBefore(div_ign,entry.firstChild);
       }
       if(episodes[i].image && loadedImages < maxLoadImagesAtOnce) {
