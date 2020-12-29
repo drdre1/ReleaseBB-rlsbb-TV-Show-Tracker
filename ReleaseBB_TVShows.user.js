@@ -24,19 +24,12 @@
 // @exclude     http://www.rlsbb.com/maintenance.htm
 // @exclude     http://rlsbb.ru/maintenance.html
 // @exclude     http:/rlsbb.com/maintenance.htm
-// @version     16
-
-// @grant       GM_setValue
-// @grant       GM_getValue
-// @grant       GM_xmlhttpRequest
-// @grant       GM_openInTab
+// @version     17
 
 // @grant       GM.setValue
 // @grant       GM.getValue
 // @grant       GM.xmlHttpRequest
 // @grant       GM.openInTab
-
-// @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // ==/UserScript==
 "use strict";
 
@@ -186,7 +179,18 @@ var mapID2Index = {}; // temporary cache for finding an entry by its ID i.e. uni
 function addCSS() {
   document.head.appendChild(document.createElement('style')).innerHTML = `
 #rlsbbmymainwin {
-  position:fixed; top:0px; left:0px; z-index:999
+  position:fixed;
+  top:0px;
+  left:0px;
+  z-index:999;
+  font-size: 13px;
+}
+#rlsbbmymainwin button, #rlsbbmymainwin input {
+  padding: 3px;
+}
+#rlsbbmymainwin ul {
+  list-style:none;
+  margin: 0 0 0 3px;
 }
 .rlsbbmy_menu {
   overflow:auto; margin-top:1px; margin-bottom:3px; background: #bbb;
@@ -198,8 +202,8 @@ function addCSS() {
   background: #bbb;
   text-shadow: 1px 1px 0 #eee;
   float: left;
-  padding:2px 4px 1px;
-  margin: 2px;
+  padding:0px 2px 24px;
+  margin: 1px;
   height: 20px;
   text-align: center;
   font-size: 14px;
@@ -210,7 +214,7 @@ function addCSS() {
   border-bottom-left-radius: 5px;
 }
 .rlsbbmy_showentry {
-  margin:3px 20px 3px 10px;
+  margin:3px 20px 3px 5px;
   min-width:240px;
   min-height:20px;
   font-weight:bolder;
@@ -424,11 +428,11 @@ async function getLatestEpisodes() {
 
 function readPost(post) {
 
-  var entryContent = post.getElementsByClassName("entry-content")[0];
+  var entryContent = post.getElementsByClassName("entry-summary")[0];
 
-  var link = post.getElementsByClassName("postTitle")[0].getElementsByTagName("a")[0];
+  var link = post.querySelector('.entry-header .entry-title a');
 
-  var subtitle = post.getElementsByClassName("postSubTitle")[0];
+  var subtitle = post.querySelector('.entry-header .entry-meta');
 
   var id = link.href;
   var upperCaseContent = entryContent.innerHTML.toUpperCase();
@@ -439,6 +443,7 @@ function readPost(post) {
       post.querySelectorAll('.postDay').forEach(function (e) {
          const span = e.appendChild(document.createElement('span'))
          span.setAttribute("title", "You already saw this post")
+         span.style.cursor = 'help'
          span.appendChild(document.createTextNode('✅'))
          if ("firstSeen" in record) {
            const since = minutesSince(new Date(record.firstSeen))
@@ -523,7 +528,7 @@ function readPost(post) {
 async function readPosts() {
   await load();
   var error_recordexists = false;
-  var posts = document.getElementsByClassName("entry post");
+  var posts = document.getElementsByClassName("post");
   for(var i = 0; i < posts.length; i++) {
     try {
       readPost(posts[i]);
@@ -551,7 +556,7 @@ function crawl() {
     crawlto = parseInt(document.location.href.split("#crawlbackto=")[1])
   }
 
-  var url = document.getElementById("olderEntries").getElementsByTagName("a")[0].href+"#crawlbackto=" + crawlto;
+  var url = document.querySelector('.navigation a.next.page-numbers').href + "#crawlbackto=" + crawlto;
   document.location.href = url;
 }
 
