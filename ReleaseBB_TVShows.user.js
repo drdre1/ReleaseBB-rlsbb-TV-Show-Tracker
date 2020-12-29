@@ -3,7 +3,6 @@
 // @description Follow TV Shows on rlsbb.ru and swiftly find new episodes
 // @namespace   drdre
 // @license     MIT
-// @icon        http://rlsbb.ru/cropped_bb_icon.ico
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/(\?.+)?$/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/page\/\d+\/?.*/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/category\/tv-shows\/(page\/\d+\/?)?$/
