@@ -24,7 +24,7 @@
 // @exclude     http://www.rlsbb.com/maintenance.htm
 // @exclude     http://rlsbb.ru/maintenance.html
 // @exclude     http:/rlsbb.com/maintenance.htm
-// @version     17
+// @version     18
 
 // @grant       GM.setValue
 // @grant       GM.getValue
