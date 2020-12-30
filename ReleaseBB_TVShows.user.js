@@ -3,6 +3,7 @@
 // @description Follow TV Shows on rlsbb.ru and swiftly find new episodes
 // @namespace   drdre
 // @license     MIT
+// @icon        http://rlsbb.ru/wp-content/uploads/2020/11/logo.png
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/(\?.+)?$/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/page\/\d+\/?.*/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/category\/tv-shows\/(page\/\d+\/?)?$/
@@ -211,6 +212,7 @@ function addCSS() {
   overflow:auto;
   border-bottom-right-radius: 5px;
   border-bottom-left-radius: 5px;
+  text-align:center;
 }
 .rlsbbmy_showentry {
   margin:3px 20px 3px 5px;
@@ -1235,6 +1237,12 @@ function removeAds() {
 
 var adIv;
 (function() {
+  // Move dark mode button to the right
+  document.querySelectorAll('.dark-button,.light-button,.nightmodebt').forEach(function (el) {
+    el.style.left = 'auto'
+    el.style.right = '10px'
+  })
+
   if(document.title.indexOf('Just a moment') !== -1) {
     // DDoS protection by Cloudflare
     return
