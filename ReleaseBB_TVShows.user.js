@@ -4,6 +4,7 @@
 // @namespace   drdre
 // @license     MIT
 // @icon        https://proxybb.com/wp-content/uploads/2021/02/favicon.ico
+// @updateURL   https://openuserjs.org/meta/drdre1/ReleaseBB_rlsbb_TV_Show_Tracker.meta.js
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/(\?.+)?$/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/page\/\d+\/?.*/
 // @include     /^https?:\/\/(www\.)?rlsbb\.com\/category\/tv-shows\/(page\/\d+\/?)?$/
@@ -35,7 +36,7 @@
 // @exclude     https://rlsbb.ru/maintenance.html
 // @exclude     https:/rlsbb.com/maintenance.html
 // @exclude     https:/releasebb.net/maintenance.html
-// @version     19
+// @version     20
 
 // @grant       GM.setValue
 // @grant       GM.getValue
@@ -470,13 +471,13 @@ function readPost(post) {
     }
   }
 
-  var time = subtitle.innerHTML.match(/Posted on (\D+) (\d+)\D\D, (\d{4}) at (\d+):(\d{2}) (am|pm)/); // Posted on August 17th, 2014 at 10:47 pm
+  var time = subtitle.innerHTML.match(/Posted on (\D+) (\d+)\D\D, (\d{4}) at (\d+):(\d{2})\s*(|am|pm)/); // Posted on August 17th, 2014 at 10:47 pm
   var title = trim(link.innerHTML);
 
   var result = {
     "id": id,
     "title": title,
-    "time": (new Date(int(time[3]), parseMonthname(time[1]),int(time[2]), int(time[4])+(time[6] == 'pm'?12:0), int(time[5]), 0, 0)).getTime(),
+    "time": (new Date(int(time[3]), parseMonthname(time[1]),int(time[2]), int(time[4])+((time[6] === 'pm' && int(time[4]) !== 12)?12:0), int(time[5]), 0, 0)).getTime(),
     "firstSeen" : new Date().getTime(),
     "release" : []
   };
